@@ -15,6 +15,13 @@ mkdir -p ecommerce/static
 # Install dependencies
 pip install django pillow gunicorn
 
+# Create a symlink to help Python find the settings module
+echo "Creating symlinks for module discovery"
+cd ecommerce
+ln -sf ecommerce/settings.py settings.py
+ls -la
+cd ..
+
 # Set environment variable to point to the correct settings module
 export DJANGO_SETTINGS_MODULE=ecommerce.settings
 

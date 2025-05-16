@@ -3,7 +3,7 @@ services:
     name: raw-rebel
     runtime: python
     buildCommand: chmod +x build.sh && ./build.sh
-    startCommand: cd /opt/render/project/src && PYTHONPATH=$PYTHONPATH:/opt/render/project/src gunicorn --chdir ecommerce ecommerce.wsgi:application
+    startCommand: cd /opt/render/project/src && PYTHONPATH=/opt/render/project/src:/opt/render/project/src/ecommerce gunicorn --chdir ecommerce --env DJANGO_SETTINGS_MODULE=ecommerce.settings wsgi:application
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.11
