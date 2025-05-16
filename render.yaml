@@ -3,12 +3,12 @@ services:
     name: raw-rebel
     runtime: python
     buildCommand: chmod +x build.sh && ./build.sh
-    startCommand: cd /opt/render/project/src && gunicorn wsgi:application
+    startCommand: cd /opt/render/project/src && gunicorn ecommerce.ecommerce.wsgi:application
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.11
       - key: DJANGO_SETTINGS_MODULE
-        value: settings
+        value: ecommerce.ecommerce.settings
       - key: DEBUG
         value: "False"
       - key: ALLOWED_HOSTS

@@ -12,8 +12,18 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+import sys
+import logging
+
+# Set up logging
+logging.basicConfig(filename='/tmp/inner_settings_debug.log', level=logging.DEBUG)
+logging.debug("Loading inner ecommerce settings")
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Log directories for debugging
+logging.debug(f"BASE_DIR: {BASE_DIR}")
+logging.debug(f"__file__: {__file__}")
 
 # Media files configuration
 MEDIA_URL = '/media/'
@@ -69,6 +79,7 @@ import os
 shop_app_path = os.path.join(BASE_DIR, 'shop')
 if shop_app_path not in sys.path:
     sys.path.insert(0, shop_app_path)
+    logging.debug(f"Added shop app to sys.path: {shop_app_path}")
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -81,6 +92,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'ecommerce.urls'
+logging.debug(f"ROOT_URLCONF set to: {ROOT_URLCONF}")
 
 TEMPLATES = [
     {
@@ -101,6 +113,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'ecommerce.wsgi.application'
+logging.debug(f"WSGI_APPLICATION set to: {WSGI_APPLICATION}")
 
 
 # Database
