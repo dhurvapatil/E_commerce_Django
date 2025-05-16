@@ -1,7 +1,7 @@
 """
 WSGI config for ecommerce project.
 
-This file imports the original WSGI application from the ecommerce/ subdirectory.
+This module creates the WSGI application for the project.
 """
 
 import os
@@ -12,4 +12,7 @@ path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if path not in sys.path:
     sys.path.append(path)
 
-from ecommerce.wsgi import application  # Import the application from the inner ecommerce directory 
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ecommerce.settings')
+
+from django.core.wsgi import get_wsgi_application
+application = get_wsgi_application() 
