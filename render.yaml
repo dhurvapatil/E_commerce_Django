@@ -3,7 +3,7 @@ services:
     name: raw-rebel
     runtime: python
     buildCommand: chmod +x build.sh && ./build.sh
-    startCommand: cd /opt/render/project/src && gunicorn --log-level=debug wsgi:application
+    startCommand: cd /opt/render/project/src && gunicorn wsgi:application
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.11

@@ -32,11 +32,13 @@ SECRET_KEY = 'django-insecure-ya9)sxab8qj*%7@o^%406d_f6w-_e90e@u2ovh0gu-p#(3%*f0
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'e-commerce-django-f4um.onrender.com', '.onrender.com']
 
 # Add these lines to allow Render domains
 if not DEBUG:
-    ALLOWED_HOSTS.extend(['.onrender.com', os.environ.get('ALLOWED_HOSTS', '')])
+    render_host = os.environ.get('ALLOWED_HOSTS', '')
+    if render_host and render_host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(render_host)
 
 # Configure secure cookies for production
 if not DEBUG:

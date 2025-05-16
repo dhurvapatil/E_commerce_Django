@@ -29,6 +29,11 @@ logging.debug(f"DJANGO_SETTINGS_MODULE set to: {os.environ.get('DJANGO_SETTINGS_
 logging.debug(f"Python path: {sys.path}")
 logging.debug(f"Current directory contents: {os.listdir(current_dir)}")
 
+# Explicitly set ALLOWED_HOSTS in environment variables
+if 'ALLOWED_HOSTS' not in os.environ:
+    os.environ['ALLOWED_HOSTS'] = 'e-commerce-django-f4um.onrender.com,.onrender.com'
+    logging.debug("Set ALLOWED_HOSTS environment variable")
+
 # Try to directly modify ALLOWED_HOSTS
 try:
     from django.conf import settings
@@ -39,6 +44,14 @@ try:
     logging.debug(f"Updated ALLOWED_HOSTS: {settings.ALLOWED_HOSTS}")
 except Exception as e:
     logging.error(f"Error updating ALLOWED_HOSTS: {e}")
+
+# Apply deployment overrides
+try:
+    import deployment_overrides
+    deployment_overrides.override_settings()
+    logging.debug("Applied deployment overrides")
+except Exception as e:
+    logging.error(f"Error applying deployment overrides: {e}")
 
 try:
     # Import the Django WSGI application

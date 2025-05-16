@@ -11,6 +11,13 @@ import logging
 logging.basicConfig(filename='/tmp/settings_debug.log', level=logging.DEBUG)
 logging.debug("Loading standalone settings file")
 
+# Import load_env to set environment variables
+try:
+    import load_env
+    logging.debug("Loaded environment variables from load_env.py")
+except Exception as e:
+    logging.error(f"Error loading environment variables: {e}")
+
 # Build paths inside the project
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 logging.debug(f"BASE_DIR: {BASE_DIR}")
@@ -32,7 +39,7 @@ SECRET_KEY = 'django-insecure-ya9)sxab8qj*%7@o^%406d_f6w-_e90e@u2ovh0gu-p#(3%*f0
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 logging.debug(f"DEBUG: {DEBUG}")
 
-# ALLOWED_HOSTS
+# ALLOWED_HOSTS - explicitly add the Render domain
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'e-commerce-django-f4um.onrender.com', '.onrender.com']
 render_host = os.environ.get('ALLOWED_HOSTS', '')
 if render_host and render_host not in ALLOWED_HOSTS:
@@ -132,13 +139,19 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/login/'
 
-# Import inner settings to override
+# Apply deployment overrides
 try:
-    from ecommerce.ecommerce.settings import *
-    logging.debug("Successfully imported settings from ecommerce.ecommerce.settings")
+    import deployment_overrides
+    deployment_overrides.override_settings()
+    logging.debug("Applied deployment overrides")
 except Exception as e:
-    logging.error(f"Error importing inner settings: {e}")
-    logging.error("Continuing with standalone settings...")
+    logging.error(f"Error applying deployment overrides: {e}")
+
+# Make sure ALLOWED_HOSTS is properly set after importing inner settings
+if 'e-commerce-django-f4um.onrender.com' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('e-commerce-django-f4um.onrender.com')
+if '.onrender.com' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('.onrender.com')
 
 # Print the final ALLOWED_HOSTS for debugging
 logging.debug(f"Final ALLOWED_HOSTS: {ALLOWED_HOSTS}") 

@@ -15,6 +15,42 @@ mkdir -p ecommerce/static
 # Install dependencies
 pip install django pillow gunicorn
 
+# Create load_env.py for environment variables
+echo "Creating load_env.py"
+cat > load_env.py << 'EOF'
+"""
+Load environment variables for Django.
+"""
+
+import os
+import logging
+
+# Set up logging
+logging.basicConfig(filename='/tmp/load_env.log', level=logging.DEBUG)
+logging.debug("Loading environment variables")
+
+# Set default environment variables for Render deployment
+def setup_env():
+    """Set up environment variables for Render deployment."""
+    
+    # Required environment variables
+    env_vars = {
+        'DJANGO_SETTINGS_MODULE': 'settings',
+        'DEBUG': 'False',
+        'ALLOWED_HOSTS': 'e-commerce-django-f4um.onrender.com,.onrender.com'
+    }
+    
+    # Set environment variables if not already set
+    for key, value in env_vars.items():
+        if key not in os.environ:
+            os.environ[key] = value
+            logging.debug(f"Set {key}={value}")
+    
+    logging.debug(f"Final environment variables: DJANGO_SETTINGS_MODULE={os.environ.get('DJANGO_SETTINGS_MODULE')}, DEBUG={os.environ.get('DEBUG')}, ALLOWED_HOSTS={os.environ.get('ALLOWED_HOSTS')}")
+
+# Execute when imported
+setup_env()
+
 # Make sure settings.py is properly set up in the ecommerce directory
 if [ -f ecommerce/settings.py ]; then
     echo "settings.py already exists in ecommerce directory"
@@ -82,6 +118,10 @@ logging.debug(f"ROOT_URLCONF set to: {ROOT_URLCONF}")
 EOF
 fi
 
+# Directly modify the inner settings.py to include the Render domains
+echo "Updating ALLOWED_HOSTS in inner settings file"
+sed -i "s/ALLOWED_HOSTS = \['localhost', '127.0.0.1'\]/ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'e-commerce-django-f4um.onrender.com', '.onrender.com']/" ecommerce/ecommerce/settings.py || echo "Failed to update inner settings"
+
 # Create a simple wsgi.py in the inner ecommerce directory to make sure it's properly configured
 echo "Updating WSGI configuration in inner ecommerce directory"
 cat > ecommerce/ecommerce/wsgi.py << 'EOF'
@@ -113,6 +153,11 @@ if parent_dir not in sys.path:
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ecommerce.settings')
 logging.debug(f"DJANGO_SETTINGS_MODULE set to: {os.environ.get('DJANGO_SETTINGS_MODULE')}")
 
+# Explicitly set ALLOWED_HOSTS in environment variables
+if 'ALLOWED_HOSTS' not in os.environ:
+    os.environ['ALLOWED_HOSTS'] = 'e-commerce-django-f4um.onrender.com,.onrender.com'
+    logging.debug("Set ALLOWED_HOSTS environment variable")
+
 # Import Django WSGI application
 try:
     from django.core.wsgi import get_wsgi_application
@@ -123,6 +168,67 @@ except Exception as e:
     import traceback
     logging.error(traceback.format_exc())
     raise
+EOF
+
+# Create deployment overrides file
+echo "Creating deployment overrides file"
+cat > deployment_overrides.py << 'EOF'
+"""
+Deployment overrides for Django settings.
+This file is intended to be imported by Django settings modules to ensure
+proper configuration in the Render environment.
+"""
+
+import os
+import logging
+
+# Set up logging
+logging.basicConfig(filename='/tmp/deployment_overrides.log', level=logging.DEBUG)
+logging.debug("Loading deployment overrides")
+
+# Override settings for deployment
+def apply_render_overrides(settings_module):
+    """Apply Render-specific overrides to settings."""
+    
+    # Always set DEBUG to False in production
+    settings_module.DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+    logging.debug(f"Set DEBUG to {settings_module.DEBUG}")
+    
+    # Ensure ALLOWED_HOSTS includes the Render domain
+    if not hasattr(settings_module, 'ALLOWED_HOSTS'):
+        settings_module.ALLOWED_HOSTS = []
+    
+    # Add Render domains to ALLOWED_HOSTS
+    render_domains = [
+        'e-commerce-django-f4um.onrender.com',
+        '.onrender.com'
+    ]
+    
+    # Also add any domain from environment variable
+    render_host = os.environ.get('ALLOWED_HOSTS', '')
+    if render_host and render_host not in render_domains:
+        render_domains.append(render_host)
+    
+    # Add all domains to ALLOWED_HOSTS
+    for domain in render_domains:
+        if domain not in settings_module.ALLOWED_HOSTS:
+            settings_module.ALLOWED_HOSTS.append(domain)
+    
+    logging.debug(f"Final ALLOWED_HOSTS: {settings_module.ALLOWED_HOSTS}")
+    
+    return settings_module
+
+# This will be executed when imported
+def override_settings():
+    """Try to override Django settings."""
+    try:
+        from django.conf import settings
+        apply_render_overrides(settings)
+        logging.debug("Successfully applied overrides to Django settings")
+    except Exception as e:
+        logging.error(f"Error applying overrides: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
 EOF
 
 # Copy the root settings and wsgi files to ensure they're up to date
@@ -161,6 +267,11 @@ logging.debug(f"DJANGO_SETTINGS_MODULE set to: {os.environ.get('DJANGO_SETTINGS_
 logging.debug(f"Python path: {sys.path}")
 logging.debug(f"Current directory contents: {os.listdir(current_dir)}")
 
+# Explicitly set ALLOWED_HOSTS in environment variables
+if 'ALLOWED_HOSTS' not in os.environ:
+    os.environ['ALLOWED_HOSTS'] = 'e-commerce-django-f4um.onrender.com,.onrender.com'
+    logging.debug("Set ALLOWED_HOSTS environment variable")
+
 # Try to directly modify ALLOWED_HOSTS
 try:
     from django.conf import settings
@@ -171,6 +282,14 @@ try:
     logging.debug(f"Updated ALLOWED_HOSTS: {settings.ALLOWED_HOSTS}")
 except Exception as e:
     logging.error(f"Error updating ALLOWED_HOSTS: {e}")
+
+# Apply deployment overrides
+try:
+    import deployment_overrides
+    deployment_overrides.override_settings()
+    logging.debug("Applied deployment overrides")
+except Exception as e:
+    logging.error(f"Error applying deployment overrides: {e}")
 
 try:
     # Import the Django WSGI application
@@ -217,6 +336,14 @@ else:
 
 logging.debug(f"Final urlpatterns: {urlpatterns}")
 EOF
+
+# Copy all our standalone files to ensure the default environment uses them
+echo "Copying configuration files to Render-specific locations"
+cp -f wsgi.py /opt/render/project/src/wsgi.py || echo "Failed to copy wsgi.py to Render location"
+cp -f urls.py /opt/render/project/src/urls.py || echo "Failed to copy urls.py to Render location" 
+cp -f settings.py /opt/render/project/src/settings.py || echo "Failed to copy settings.py to Render location"
+cp -f deployment_overrides.py /opt/render/project/src/deployment_overrides.py || echo "Failed to copy deployment_overrides.py to Render location"
+cp -f load_env.py /opt/render/project/src/load_env.py || echo "Failed to copy load_env.py to Render location"
 
 # Set environment variable to point to the correct settings module
 export DJANGO_SETTINGS_MODULE=settings
