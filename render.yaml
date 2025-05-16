@@ -3,13 +3,13 @@ services:
     name: raw-rebel
     runtime: python
     buildCommand: chmod +x build.sh && ./build.sh
-    startCommand: cd /opt/render/project/src/ecommerce && python -c "import os; print(os.listdir('.')); print(os.path.exists('settings.py'))" && gunicorn --log-level=debug --pythonpath=/opt/render/project/src/ecommerce wsgi:application
+    startCommand: cd /opt/render/project/src && gunicorn --log-level=debug ecommerce.wsgi:application
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.11
       - key: DJANGO_SETTINGS_MODULE
-        value: settings
+        value: ecommerce.settings
       - key: DEBUG
-        value: True
+        value: "False"
       - key: ALLOWED_HOSTS
-        value: ".onrender.com" 
+        value: "e-commerce-django-f4um.onrender.com" 

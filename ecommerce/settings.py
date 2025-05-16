@@ -1,10 +1,11 @@
 """
-This settings file acts as a bridge to the actual settings module.
+This settings file imports all settings from the inner ecommerce module.
 """
 
 import os
 import sys
 import logging
+
 
 # Set up logging
 logging.basicConfig(filename='/tmp/settings_debug.log', level=logging.DEBUG)
@@ -15,56 +16,47 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, current_dir)
 logging.debug(f"Current directory: {current_dir}")
 
-# Print dir contents for debugging
-dir_contents = os.listdir(current_dir)
-logging.debug(f"Directory contents: {dir_contents}")
+# Add parent directory to Python path if needed
+parent_dir = os.path.dirname(current_dir)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+    logging.debug(f"Added parent directory to sys.path: {parent_dir}")
 
-# Check for ecommerce directory
-if 'ecommerce' in dir_contents and os.path.isdir(os.path.join(current_dir, 'ecommerce')):
-    ecommerce_dir = os.path.join(current_dir, 'ecommerce')
-    logging.debug(f"Found ecommerce directory: {ecommerce_dir}")
-    
-    # Add ecommerce dir to sys.path
-    if ecommerce_dir not in sys.path:
-        sys.path.insert(0, ecommerce_dir)
-        
-    # Check for settings.py in ecommerce directory
-    ecommerce_dir_contents = os.listdir(ecommerce_dir)
-    logging.debug(f"ecommerce directory contents: {ecommerce_dir_contents}")
-    
-    if 'settings.py' in ecommerce_dir_contents:
-        logging.debug("Found settings.py in ecommerce directory")
-        
-        # Import directly from the module, not as a relative import
-        try:
-            # Import the inner settings module
-            inner_settings = os.path.join(ecommerce_dir, 'settings.py')
-            logging.debug(f"Importing from {inner_settings}")
-            
-            # Execute the settings file directly
-            with open(inner_settings) as f:
-                exec(f.read())
-                
-            logging.debug("Successfully imported settings via exec")
-            logging.debug(f"ROOT_URLCONF is set to: {locals().get('ROOT_URLCONF', 'Not found')}")
-            
-            # To verify settings are loaded
-            for key in ['DEBUG', 'INSTALLED_APPS', 'ROOT_URLCONF', 'DATABASES']:
-                logging.debug(f"Setting {key}: {locals().get(key, 'Not found')}")
-                
-        except Exception as e:
-            logging.error(f"Error importing settings via exec: {str(e)}")
-            import traceback
-            logging.error(traceback.format_exc())
-            raise
-    else:
-        logging.error("No settings.py found in ecommerce directory")
-        raise FileNotFoundError("No settings.py found in ecommerce directory")
-else:
-    logging.error("No ecommerce directory found")
-    raise FileNotFoundError("No ecommerce directory found")
+# Add the inner ecommerce directory to Python path
+inner_dir = os.path.join(current_dir, 'ecommerce')
+if inner_dir not in sys.path:
+    sys.path.insert(0, inner_dir)
+    logging.debug(f"Added inner ecommerce directory to sys.path: {inner_dir}")
 
-# Define default settings if they're missing
-if 'ROOT_URLCONF' not in locals():
-    ROOT_URLCONF = 'ecommerce.urls'
-    logging.debug(f"Set default ROOT_URLCONF to {ROOT_URLCONF}") 
+# Import settings from the inner settings file
+try:
+    from ecommerce.settings import *
+    logging.debug("Successfully imported settings from ecommerce.settings")
+except Exception as e:
+    logging.error(f"Error importing inner settings: {e}")
+    import traceback
+    logging.error(traceback.format_exc())
+    raise
+
+# Update ALLOWED_HOSTS to include Render domain
+render_host = os.environ.get('ALLOWED_HOSTS', '')
+if render_host and render_host not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(render_host)
+    logging.debug(f"Added {render_host} to ALLOWED_HOSTS")
+
+# Always allow onrender.com domains
+if '.onrender.com' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('.onrender.com')
+    logging.debug("Added .onrender.com to ALLOWED_HOSTS")
+    
+# Add specific Render hostname
+if 'e-commerce-django-f4um.onrender.com' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('e-commerce-django-f4um.onrender.com')
+    logging.debug("Added e-commerce-django-f4um.onrender.com to ALLOWED_HOSTS")
+
+# Print the final ALLOWED_HOSTS for debugging
+logging.debug(f"Final ALLOWED_HOSTS: {ALLOWED_HOSTS}")
+
+# Ensure ROOT_URLCONF is properly set
+ROOT_URLCONF = 'ecommerce.urls'
+logging.debug(f"ROOT_URLCONF set to: {ROOT_URLCONF}") 
