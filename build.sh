@@ -20,21 +20,35 @@ if [ -f ecommerce/settings.py ]; then
     echo "settings.py already exists in ecommerce directory"
 else
     echo "Creating settings.py in ecommerce directory"
-    cp -f ecommerce/ecommerce/settings.py ecommerce/settings.py.orig
     cat > ecommerce/settings.py << 'EOF'
 """
-This settings file acts as a bridge to the actual settings module.
+This settings file imports all settings from the inner ecommerce module.
 """
 
 import os
 import sys
 
-# Get current directory and add it to path
+# Add this directory to the Python path
 current_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, current_dir)
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
 
-# Import all settings from the inner settings module
-from ecommerce.settings import *
+# Add the inner ecommerce directory to Python path
+inner_dir = os.path.join(current_dir, 'ecommerce')
+if inner_dir not in sys.path:
+    sys.path.insert(0, inner_dir)
+
+# Import * from the inner settings file
+try:
+    with open(os.path.join(inner_dir, 'settings.py')) as f:
+        exec(f.read())
+except Exception as e:
+    print(f"Error loading inner settings: {e}")
+    raise
+
+# Ensure critical settings are defined
+if 'ROOT_URLCONF' not in locals():
+    ROOT_URLCONF = 'ecommerce.urls'
 EOF
 fi
 
