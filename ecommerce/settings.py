@@ -6,7 +6,6 @@ import os
 import sys
 import logging
 
-
 # Set up logging
 logging.basicConfig(filename='/tmp/settings_debug.log', level=logging.DEBUG)
 logging.debug("Loading bridge settings file")
